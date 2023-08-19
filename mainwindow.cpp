@@ -5,7 +5,7 @@
 
 bool flag_connected = 0;
 bool flag_started = 0;
-extern uint options[4];
+extern uint options[5];
 extern bool force_dt;
 extern bool force_rmmod;
 //uint val_ch = 99;
@@ -37,7 +37,7 @@ MainWindow::MainWindow(QWidget *parent)
         }
         ui->statusbar->showMessage(err_msg);
     }
-    qDebug() << "main INIT options is:" << options[0] << options[1] << options[2] << options[3];
+    qDebug() << "main INIT options is:" << options[0] << options[1] << options[2] << options[3] << options[4];
 
     myWorker = new worker;
     WorkerThread = new QThread;

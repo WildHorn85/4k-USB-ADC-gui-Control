@@ -28,7 +28,11 @@ void worker::do_Work()
         emit timeout();
         last_sec = curr_sec;
     } else {
-        usleep(100);
+        #ifdef  __linux__
+            usleep(1000);
+        #else
+            Sleep(1);
+        #endif
     }
 
     QMetaObject::invokeMethod(this, "do_Work", Qt::QueuedConnection);

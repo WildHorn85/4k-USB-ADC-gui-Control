@@ -8,6 +8,8 @@
 #include "adc_control.h"
 #include "ftd2xx.h"
 
+//#include <QTime>
+
 extern unsigned long adc_out_buff[4096];	// буфер памяти АЦП
 
 /* Приблуды для работы с устройством АЦП */
@@ -68,7 +70,7 @@ int adc_begin(bool val_init_flag, uint* opt_array, bool force_dev, bool force_rm
 
 	/* Настраиваем параметры порта */
     //if (FT_SetBaudRate(ftHandle, 115200) != FT_OK) return 406;
-    if((ftStatus = FT_SetBaudRate(ftHandle, 921600)) != FT_OK) return ftStatus;
+    if((ftStatus = FT_SetBaudRate(ftHandle, opt_array[4])) != FT_OK) return ftStatus;
     if((ftStatus = FT_SetDataCharacteristics(ftHandle, FT_BITS_8, FT_STOP_BITS_1, FT_PARITY_NONE)) != FT_OK) return ftStatus;
     if((ftStatus = FT_SetFlowControl(ftHandle, FT_FLOW_RTS_CTS, 0, 0)) != FT_OK) return ftStatus;
     if((ftStatus = FT_SetDtr(ftHandle)) != FT_OK) return ftStatus;
@@ -191,6 +193,13 @@ int adc_read_mem(ulong (&Array)[4096], ulong *summ, uint size, uint val_ch) {
     if ((ftStatus = FT_Read(ftHandle,buf,mem_size,&BytesReceived)) == FT_OK) {
 		if (BytesReceived == mem_size) {		// FT_Read OK
             (*summ) = 0;
+            /* DUMP FOR DEBUG */
+            //char filenamedump[31];
+            //qint64 curr_sec = QDateTime::currentMSecsSinceEpoch();
+            //sprintf(filenamedump,"dump-%d-%lld.txt", val_ch, curr_sec);
+            //FILE *filedump;
+            //filedump = fopen(filenamedump, "w");
+            /*****************/
             for(uint i=0; i<size; i++) {
                 if (val_ch == 2) {
                     t_uni.bt[0] = buf[i+16384];
@@ -199,6 +208,9 @@ int adc_read_mem(ulong (&Array)[4096], ulong *summ, uint size, uint val_ch) {
                     t_uni.bt[3] = buf[i+28672];
                     Array[i] = t_uni.chan;
                     (*summ) += Array[i];
+                    /* DUMP */
+                    //fprintf(filedump, "%04d | %02x %02x %02x %02x | %lu\n", i, t_uni.bt[0], t_uni.bt[1], t_uni.bt[2], t_uni.bt[3], t_uni.chan);
+                    /********/
                 } else {
                     t_uni.bt[0] = buf[i];
                     t_uni.bt[1] = buf[i+4096];
@@ -206,8 +218,14 @@ int adc_read_mem(ulong (&Array)[4096], ulong *summ, uint size, uint val_ch) {
                     t_uni.bt[3] = buf[i+12288];
                     Array[i] = t_uni.chan;
                     (*summ) += t_uni.chan;
+                    /* DUMP */
+                    //fprintf(filedump, "%04d | %02x %02x %02x %02x | %lu\n", i, t_uni.bt[0], t_uni.bt[1], t_uni.bt[2], t_uni.bt[3], t_uni.chan);
+                    /********/
                 }
-			}
+            }
+            /* DUMP */
+            //fclose (filedump);
+            /********/
 		} else {
             return 21;				// Error 21 - Не удалось прочитать память АЦП (Read Timeout)
 		}
@@ -335,8 +353,10 @@ int settings_ini(uint* opt_array) {
         opt_array[1] = 0;   // номер рабочего канала АЦП
         opt_array[2] = 16;  // значение порога "грубо"
         opt_array[3] = 0;   // значение порога "точно"
+        opt_array[4] = 921600;   // baudrate
         fileini = fopen(filenameini, "w");				//пересоздаём файл с настройками заново
         fprintf(fileini, "%01d             //номер устройства FTDI на порту (обычно 0)\n", opt_array[0]);
+        fprintf(fileini, "%07d       //baudrate (default is 921600)\n", opt_array[4]);
         fprintf(fileini, "%01d             //количество каналов в устройстве\n", 1);
         fprintf(fileini, "%01d             //выбранный канал анализатора\n", 1);
         fprintf(fileini, "%03d           //порог АЦП (грубо)\n", opt_array[2]);
@@ -353,6 +373,7 @@ int settings_ini(uint* opt_array) {
         char spec_str [3];
         char coarse_str [4];
         char fine_str [4];
+        char baudrate_str [8];
         char tmp_buff [100];
 
         if (fgets(pr_str, 2, fileini) != NULL ) {		//читаем первую сторку (номер устройства FTDI на порту)
@@ -360,6 +381,13 @@ int settings_ini(uint* opt_array) {
             fgets (tmp_buff, 100, fileini);				//дочитываем строку до конца
         } else {
             opt_array[0] = 0;							//а если не прочиталось, то используем стандартное значение
+            errflag = 1;
+        }
+        if (fgets(baudrate_str, 8, fileini) != NULL ) {		//читаем сторку (baudrate)
+            opt_array[4] = atoi(baudrate_str);				//переводим считанный текст вы цифру
+            fgets (tmp_buff, 100, fileini);				//дочитываем строку до конца
+        } else {
+            opt_array[4] = 921600;							//а если не прочиталось, то используем стандартное значение
             errflag = 1;
         }
         if (fgets(ch_str, 2, fileini) != NULL ) {		//читаем вторую сторку (количество каналов)
@@ -420,6 +448,7 @@ int settings_ini(uint* opt_array) {
             remove(filenameini);						//удаляем повреждённый файл настроек совсем
             fileini = fopen(filenameini, "w");			//пересоздаём файл с текущими настройками
             fprintf(fileini, "%01d             //номер устройства FTDI на порту (обычно 0)\n", opt_array[0]);
+            fprintf(fileini, "%07d       //baudrate (default is 921600)\n", opt_array[4]);
             fprintf(fileini, "%01d             //количество каналов в устройстве\n", opt_dev);
             fprintf(fileini, "%01d             //выбранный канал анализатора\n", opt_chan);
             fprintf(fileini, "%03d           //порог АЦП (грубо)\n", opt_array[2]);
@@ -460,6 +489,7 @@ int settings_save(uint* opt_array) {
     remove(filenameini);						//удаляем старый файл настроек
     fileini = fopen(filenameini, "w");			//пересоздаём файл с текущими настройками
     fprintf(fileini, "%01d             //номер устройства FTDI на порту (обычно 0)\n", opt_array[0]);
+    fprintf(fileini, "%07d       //baudrate (default is 921600)\n", opt_array[4]);
     fprintf(fileini, "%01d             //количество каналов в устройстве\n", opt_dev);
     fprintf(fileini, "%02d            //выбранный канал анализатора\n", opt_chan);
     fprintf(fileini, "%03d           //порог АЦП (грубо)\n", opt_array[2]);

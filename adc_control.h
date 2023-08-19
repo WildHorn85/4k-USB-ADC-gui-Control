@@ -1,6 +1,5 @@
 /* подключаем нужные опции и заголовки */
 #include <string.h>
-#include <unistd.h>              //sleep
 #include <stdlib.h>              //system
 #include <sys/stat.h>            //stat & mkdir
 #include <stdio.h>

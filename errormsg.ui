@@ -19,6 +19,9 @@
   <property name="windowTitle">
    <string>Dialog</string>
   </property>
+  <property name="windowIcon">
+   <iconset theme="dialog-error"/>
+  </property>
   <layout class="QVBoxLayout" name="verticalLayout" stretch="1000,1">
    <property name="leftMargin">
     <number>9</number>

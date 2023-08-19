@@ -37,6 +37,9 @@
   <property name="windowTitle">
    <string>4k USB ADC Control</string>
   </property>
+  <property name="windowIcon">
+   <iconset theme="applications-science"/>
+  </property>
   <widget class="QWidget" name="centralwidget">
    <property name="autoFillBackground">
     <bool>false</bool>

@@ -3,8 +3,6 @@
 
 #include <QDialog>
 
-//int settings_save(int* opt_array);
-
 namespace Ui {
 class Dialog;
 }

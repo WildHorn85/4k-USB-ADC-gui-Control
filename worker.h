@@ -1,10 +1,16 @@
 #ifndef WORKER_H
 #define WORKER_H
 
+#ifdef __linux__
+    #include <unistd.h>              //sleep
+#else
+    #include <windows.h>
+#endif
+
 #include <QObject>
 #include <QDebug>
 #include <QTime>
-#include <unistd.h>              //sleep
+
 #include <cstring>
 #include "adc_control.h"
 

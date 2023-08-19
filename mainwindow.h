@@ -3,15 +3,12 @@
 
 #include <QMainWindow>
 #include <QThread>
-//#include <QLogValueAxis>
 #include <QLineSeries>
 #include <QValueAxis>
 #include <QChart>
 #include <QChartView>
-//#include <QTimer>
 #include <QFileDialog>
 #include <QDebug>
-
 #include <QAreaSeries>
 #include <QLogValueAxis>
 

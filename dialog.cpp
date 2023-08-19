@@ -2,7 +2,7 @@
 #include "ui_dialog.h"
 #include "adc_control.h"
 
-uint options[4] = {0, };
+uint options[5] = {0, };
 bool force_dt = 0;
 bool force_rmmod = 0;
 
@@ -17,6 +17,8 @@ Dialog::Dialog(QWidget *parent) :
     //ui->sb_chan->setValue(options[2]);
     ui->sb_p_grub->setValue(options[2]);
     ui->sb_p_toch->setValue(options[3]);
+    ui->combo_baudrate->setCurrentText(QString::number(options[4]));
+    //ui->combo_baudrate->;
 
     switch(options[1]) {
         case 0:
@@ -37,7 +39,7 @@ Dialog::Dialog(QWidget *parent) :
             break;
     }
 
-    qDebug() << "dialog INIT options is:" << options[0] << options[1] << options[2] << options[3];
+    qDebug() << "dialog INIT options is:" << options[0] << options[1] << options[2] << options[3] << options[4];
 }
 
 Dialog::~Dialog()
@@ -48,13 +50,10 @@ Dialog::~Dialog()
 void Dialog::on_buttonBox_accepted()
 {
     options[0] = ui->sb_port->value();
-    //options[1] = ui->sb_dev->value();
-    //options[2] = ui->sb_chan->value();
     options[2] = ui->sb_p_grub->value();
     options[3] = ui->sb_p_toch->value();
+    options[4] = ui->combo_baudrate->currentText().toInt();
 
-    //int dev_chan = ui->sb_dev->value() + ui->sb_chan->value();
-    //qDebug() << "dev_chan" << dev_chan;
     switch(ui->sb_dev->value()) {
     case 1:
             options[1] = 0;
@@ -76,7 +75,7 @@ void Dialog::on_buttonBox_accepted()
             options[1] = 0;
             break;
     }
-    qDebug() << "dialog ACCEPT options is:" << options[0] << options[1] << options[2] << options[3];
+    qDebug() << "dialog ACCEPT options is:" << options[0] << options[1] << options[2] << options[3]<< options[4];
     adc_thld_reset(options[1]);
     adc_thld_set(options[1], options[2], options[3]);
 }
@@ -86,6 +85,7 @@ void Dialog::on_buttonSave_clicked()
     options[0] = ui->sb_port->value();
     options[2] = ui->sb_p_grub->value();
     options[3] = ui->sb_p_toch->value();
+    options[4] = ui->combo_baudrate->currentText().toInt();
 
     switch(ui->sb_dev->value()) {
     case 1:
@@ -110,7 +110,7 @@ void Dialog::on_buttonSave_clicked()
     }
 
     settings_save(options);
-    qDebug() << "dialog SAVE options is:" << options[0] << options[1] << options[2] << options[3];
+    qDebug() << "dialog SAVE options is:" << options[0] << options[1] << options[2] << options[3] << options[4];
     adc_thld_reset(options[1]);
     adc_thld_set(options[1], options[2], options[3]);
 }
