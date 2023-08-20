@@ -8,14 +8,13 @@
 #include "adc_control.h"
 #include "ftd2xx.h"
 
-//#include <QTime>
-
 extern unsigned long adc_out_buff[4096];	// буфер памяти АЦП
 
 /* Приблуды для работы с устройством АЦП */
 FT_HANDLE ftHandle;					// указатель на устройство АЦП
 FT_STATUS ftStatus;
-uint BytesWritten;
+DWORD BytesWritten;
+DWORD BytesReceived;
 
 /* Открытие устройства АЦП (lvl 3) */
 int adc_begin(bool val_init_flag, uint* opt_array, bool force_dev, bool force_rmd) {
@@ -55,12 +54,12 @@ int adc_begin(bool val_init_flag, uint* opt_array, bool force_dev, bool force_rm
 		if (strcmp(OriginDev_1ch, Data.Description) == 0) {		//найдено старое устройствo на один канал (1ch)
             if (!force_dev) opt_array[1] = 0;                   //автопереопределение канала
 			flag_not_found = 0;									//устройство найдено, флаг сброшен
-            qDebug() << "1ch_found";
+            //qDebug() << "1ch_found";
 		}
 		if (strcmp(OriginDev_2ch, Data.Description) == 0) {		//найдено новое устройствo на два канала (2ch)
             if (!force_dev) if (opt_array[1] == 0) opt_array[1] = 1; //автопереопределение канала
 			flag_not_found = 0;									//устройство найдено, флаг сброшен
-            qDebug() << "2ch_found";
+            //qDebug() << "2ch_found";
 		}
         if (flag_not_found) return 404;                         //Error 404 - Не удалось найти АЦП по имени
 		
@@ -76,7 +75,7 @@ int adc_begin(bool val_init_flag, uint* opt_array, bool force_dev, bool force_rm
     if((ftStatus = FT_SetDtr(ftHandle)) != FT_OK) return ftStatus;
     if((ftStatus = FT_SetRts(ftHandle)) != FT_OK) return ftStatus;
 
-    qDebug() << "CONNECTION - OK!";
+    //qDebug() << "CONNECTION - OK!";
 
 	return 0;
 }
@@ -108,7 +107,7 @@ int adc_start(uint val_ch) {
 /* Очистка памяти АЦП (lvl 3) */
 int adc_clear_mem(uint val_ch) {
     uchar ADC_WRITE;
-    uint mem_size;          // размер памяти АЦП в байтах
+    DWORD mem_size;          // размер памяти АЦП в байтах
 
     if (val_ch == 0) {      //на 1 байт больше!
         mem_size = 16385;
@@ -118,7 +117,8 @@ int adc_clear_mem(uint val_ch) {
         ADC_WRITE = 32;
     }
 
-    uchar cls[mem_size];
+    uchar* cls = new uchar[mem_size];
+    //uchar cls[mem_size];
     memset(cls,0,mem_size);
 
     if ((ftStatus = FT_Write(ftHandle, &ADC_WRITE, 1, &BytesWritten)) != FT_OK) return ftStatus;      // Не удалось отправить команду на очистку памяти
@@ -130,7 +130,7 @@ int adc_clear_mem(uint val_ch) {
 
 int adc_write_mem(ulong* Array, uint size, uint val_ch) {
     uchar ADC_WRITE;
-    uint mem_size;              // размер памяти АЦП в байтах
+    DWORD mem_size;              // размер памяти АЦП в байтах
 
     if (val_ch == 0) {          //на 1 байт больше!
         mem_size = 16385;
@@ -140,7 +140,8 @@ int adc_write_mem(ulong* Array, uint size, uint val_ch) {
         ADC_WRITE = 32;
     }
 
-    uchar wrt[mem_size];
+    uchar* wrt = new uchar[mem_size];
+    //uchar wrt[mem_size];
     memset(wrt,0,mem_size);
     union {uchar bt[4]; ulong chan;} t_uni;
 
@@ -171,9 +172,8 @@ int adc_write_mem(ulong* Array, uint size, uint val_ch) {
 
 /* Чтение памяти АЦП (lvl 3) */
 int adc_read_mem(ulong (&Array)[4096], ulong *summ, uint size, uint val_ch) {
-    uint BytesReceived;
     uchar ADC_READ;
-    uint mem_size;          // размер памяти АЦП в байтах
+    DWORD mem_size;          // размер памяти АЦП в байтах
 
     if (val_ch == 0) {
         mem_size = 16384;
@@ -183,15 +183,16 @@ int adc_read_mem(ulong (&Array)[4096], ulong *summ, uint size, uint val_ch) {
         ADC_READ = 16;
     }
 
-    uchar buf[mem_size];
+    uchar* buf = new uchar[mem_size];
+    //uchar buf[mem_size];
     memset(buf,0,mem_size);
     union {uchar bt[4]; ulong chan;} t_uni;
     (*summ) = 0;
 
     if ((ftStatus = FT_Write(ftHandle, &ADC_READ, 1, &BytesWritten)) != FT_OK) return ftStatus;		// Не удалось отправить команду на чтение памяти АЦП
     if ((ftStatus = FT_SetTimeouts(ftHandle,1000,0)) != FT_OK) return ftStatus;		//PORT READ TIMEOUT
-    if ((ftStatus = FT_Read(ftHandle,buf,mem_size,&BytesReceived)) == FT_OK) {
-		if (BytesReceived == mem_size) {		// FT_Read OK
+    if ((ftStatus = FT_Read(ftHandle, buf, mem_size, &BytesReceived)) == FT_OK) {
+        if (BytesReceived == mem_size) {		// FT_Read OK
             (*summ) = 0;
             /* DUMP FOR DEBUG */
             //char filenamedump[31];

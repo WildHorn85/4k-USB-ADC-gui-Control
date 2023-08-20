@@ -6,6 +6,10 @@
 #include <time.h>
 #include <QDebug>
 
+#ifdef _MSC_VER
+#define _CRT_SECURE_NO_WARNINGS
+#endif
+
 extern int adc_begin(bool val_init_flag, uint* opt_array, bool force_dev, bool force_rmd);                                        // функция открытия устройства АЦП
 extern int adc_read_mem(ulong (&Array)[4096], ulong* summ, uint size, uint val_ch);   // функция чтения памяти АЦП
 extern int adc_write_mem(ulong* Array, uint size, uint val_ch);                 // функция чтения памяти АЦП

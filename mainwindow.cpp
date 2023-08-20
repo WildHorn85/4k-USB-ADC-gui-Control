@@ -21,6 +21,8 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
 
+    QDir::setCurrent(qApp->applicationDirPath());
+
     int fResult;
     if ((fResult = settings_ini(options)) != 0) {
         char err_msg[256];
@@ -37,7 +39,7 @@ MainWindow::MainWindow(QWidget *parent)
         }
         ui->statusbar->showMessage(err_msg);
     }
-    qDebug() << "main INIT options is:" << options[0] << options[1] << options[2] << options[3] << options[4];
+    //qDebug() << "main INIT options is:" << options[0] << options[1] << options[2] << options[3] << options[4];
 
     myWorker = new worker;
     WorkerThread = new QThread;
@@ -69,12 +71,16 @@ void MainWindow::on_btn_connect_clicked()
         ui->statusbar->showMessage("Connecting...");
         int fResult = adc_begin(true, options, force_dt, force_rmmod);
         if (fResult != 0) {     //CONNECTION ERROR
-            qDebug() << "ERROR" << fResult;
+            //qDebug() << "ERROR" << fResult;
             emit error(fResult);
             ui->btn_connect->setText("Connect");
             flag_connected = 0;
         } else {                //CONENCTION OK
-            ui->statusbar->showMessage("Connected");
+            char bar_msg[256];
+            int chan_n = 1;
+            if (options[1]) chan_n = 2;
+            sprintf(bar_msg,"Connected (%d-ch deivce) on port %d (%d-8-N-1)", chan_n, options[0], options[4]);
+            ui->statusbar->showMessage(bar_msg);
             ui->btn_connect->setText("Disconnect");
             ui->btn_start->setEnabled(true);
             ui->btn_clean->setEnabled(true);
@@ -88,7 +94,7 @@ void MainWindow::on_btn_connect_clicked()
     } else {                  //IF CONNECTION PRESIST
         int fResult = adc_close();
         if (fResult != 0) {     //DISCONNECT ERROR
-            qDebug() << "ERROR" << fResult;
+            //qDebug() << "ERROR" << fResult;
             emit error(fResult);
             ui->btn_connect->setText("Disconnect");
             flag_connected = 1;
@@ -121,11 +127,11 @@ void MainWindow::on_btn_start_clicked()
             QTime tm;
             tm.setHMS(0,0,0);
             if (enTime > tm) {
-                qDebug() << "startwork signal emmitted";
+                //qDebug() << "startwork signal emmitted";
                 emit startWorkSignal();
                 WorkerThread->start();
             } else {
-                 qDebug() << "Timer is empty. Nothing to do.";
+                 //qDebug() << "Timer is empty. Nothing to do.";
                  ui->statusbar->showMessage("Timer is empty");
                  ui->btn_start->setText("Start");
                  flag_started = 0;
@@ -134,7 +140,7 @@ void MainWindow::on_btn_start_clicked()
     } else {
         int fResult = adc_stop(options[1]);
         if (fResult != 0) {
-            qDebug() << "ERROR" << fResult;
+            //qDebug() << "ERROR" << fResult;
             emit error(fResult);
             ui->btn_start->setText("Stop");
             flag_started = 1;
@@ -142,7 +148,7 @@ void MainWindow::on_btn_start_clicked()
             ui->statusbar->showMessage("Stopped");
             ui->btn_start->setText("Start");
             flag_started = 0;
-            qDebug() << "stopwork signal emmitted";
+            //qDebug() << "stopwork signal emmitted";
             emit stopWorkSignal();
             WorkerThread->quit();
             WorkerThread->wait();
@@ -243,25 +249,22 @@ void MainWindow::on_pushButton_plus_clicked()
 
 void MainWindow::on_btn_options_clicked()
 {
-    Dialog options;
-    options.setModal(true);
-    options.exec();
+    Dialog options_w;
+    options_w.setModal(true);
+    options_w.exec();
+    emit call_redraw(flag_connected);
+    //qDebug() << options[0] << options[1] << options[2] << options[3] << options[4];
 }
 
 void MainWindow::redraw_chart(bool rflag)
 {
-    //QElapsedTimer timer;
-    //timer.start();
-    //qDebug() << "===== TIMER STARTED =====";
     if (rflag) {
         int fResult = adc_read_mem(adc_out_buff, &summ, 4096, options[1]);  // функция чтения памяти АЦП
         if (fResult) {
             emit error(fResult);
             return;
         }
-        //for (int i = 1400; i < 1404; i++) qDebug() << "adc_out_buff" << i << "=" << Qt::hex << adc_out_buff[i];
-        //qDebug() << "SUMM =" << summ;
-        if (summ > 8500000000000) {
+        if (summ > ulong(8500000000000)) {
             qDebug() << "GRAPH OVERLOAD";
             ui->statusbar->showMessage("GRAPH OVERLOAD");
             for (int i = 0; i < 4096; i++) adc_out_buff[i] = 1000;
@@ -269,7 +272,6 @@ void MainWindow::redraw_chart(bool rflag)
     } else {
         for (int i = 0; i < 4096; i++) summ += adc_out_buff[i];
     }
-    //qDebug() << "adc_read_mem took" << timer.elapsed() << "milliseconds";
 
     auto *series0 = new QLineSeries();
     ulong range = x_max - x_min + 1;
@@ -283,7 +285,6 @@ void MainWindow::redraw_chart(bool rflag)
         }
     }
     series0->replace(points);
-    //qDebug() << "series0->replace took" << timer.elapsed() << "milliseconds";
 
     //MAX Value from data
     if (ui->check_auto_y->isChecked()) {
@@ -298,7 +299,6 @@ void MainWindow::redraw_chart(bool rflag)
     } else {
         max_val = ui->y_max->value();
     }
-    //qDebug() << "MAX Value from data took" << timer.elapsed() << "milliseconds";
 
     auto series = new QAreaSeries(series0);
     QPen pen(0x0B5394);
@@ -315,8 +315,6 @@ void MainWindow::redraw_chart(bool rflag)
     chart->legend()->hide();
     chart->addSeries(series);
 
-    //qDebug() << "QAreaSeries took" << timer.elapsed() << "milliseconds";
-
     auto axisX = new QValueAxis;
     axisX->setTitleText("ADC Channels");
     axisX->setLabelFormat("%i");
@@ -325,9 +323,6 @@ void MainWindow::redraw_chart(bool rflag)
     chart->addAxis(axisX, Qt::AlignBottom);
     series->attachAxis(axisX);
 
-    //qDebug() << qreal(max_val);
-    //if (qreal(max_val) > 4294967295) max_val = 4294967295;
-    //qDebug() << qreal(max_val);
     if (ui->check_log10->isChecked()) {
         auto axisY = new QLogValueAxis;
         axisY->setTitleText("Log10 Events");
@@ -346,23 +341,15 @@ void MainWindow::redraw_chart(bool rflag)
         chart->addAxis(axisY, Qt::AlignLeft);
         series->attachAxis(axisY);
     }
-    //qDebug() << "QValueAxis took" << timer.elapsed() << "milliseconds";
 
     ui->graphicsView->setRenderHint(QPainter::Antialiasing);
     ui->graphicsView->setChart(chart);
 
-    //qDebug() << "setChart(chart) took" << timer.elapsed() << "milliseconds";
-
-    /*qDebug() << "counter:" << (*counter);
-    if ((*counter) == 0) {
-        ui->graphicsView->setChart(chart);
-        (*counter) = 1;
-    } else {
-        //ui->graphicsView->updateGeometry();
-        ui->graphicsView->update();
-    }*/
-
     ui->label_enum->setText(QString::number(summ));
+
+    int chan_n = 2;
+    if (options[1] < 2) chan_n = 1;
+    ui->label_chan_val->setText(QString::number(chan_n));
 }
 
 void MainWindow::thread_timeout()

@@ -36,4 +36,19 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
 #unix|win32: LIBS += -lftd2xx
-unix|win32: LIBS += -L$$PWD/./ -lftd2xx
+#unix|win32: LIBS += -L$$PWD/./ -lftd2xx
+
+win32: LIBS += -L$$PWD/./ -lftd2xx
+
+INCLUDEPATH += $$PWD/.
+DEPENDPATH += $$PWD/.
+
+unix:!macx: LIBS += -L$$PWD/./ -lftd2xx
+
+INCLUDEPATH += $$PWD/.
+DEPENDPATH += $$PWD/.
+
+#RC_ICONS = adc_icon.ico
+
+RESOURCES += \
+    images.qrc

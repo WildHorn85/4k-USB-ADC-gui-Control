@@ -32,7 +32,8 @@
    <string>Options</string>
   </property>
   <property name="windowIcon">
-   <iconset theme="applications-system"/>
+   <iconset resource="images.qrc">
+    <normaloff>:/icon_options.ico</normaloff>:/icon_options.ico</iconset>
   </property>
   <layout class="QHBoxLayout" name="horizontalLayout" stretch="100,1">
    <item>
@@ -487,7 +488,9 @@
    </item>
   </layout>
  </widget>
- <resources/>
+ <resources>
+  <include location="images.qrc"/>
+ </resources>
  <connections>
   <connection>
    <sender>buttonBox</sender>

@@ -4,7 +4,7 @@ qint64 last_sec = 0;
 
 worker::worker(QObject *parent) : QObject(parent), running(false)
 {
-    qDebug() << "running: " << running;
+    //qDebug() << "running: " << running;
 }
 
 
@@ -16,9 +16,12 @@ void worker::do_Work()
     emit SignalToObj_mainThreadGUI();
 
     if (!running) {
-        qDebug() << "running: " << running;
-        fflush(NULL);
-        usleep(100);
+        //qDebug() << "running: " << running;
+        #ifdef  __linux__
+            usleep(1000);
+        #else
+            Sleep(1);
+        #endif
         return;
     }
 
