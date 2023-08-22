@@ -14,6 +14,7 @@ uint x_min = 0;
 uint x_max = 4095;
 ulong max_val = 1000;
 ulong summ = 0;
+uint tick_values[17] = {1, 2, 4, 5, 10, 20, 30, 40, 50, 100, 150, 200, 250, 300, 400, 500, 1000};
 
 MainWindow::MainWindow(QWidget *parent)
   : QMainWindow(parent)
@@ -345,10 +346,21 @@ void MainWindow::redraw_chart(bool rflag)
     axisX->setTitleFont(title_font);
     axisX->setLabelsFont(label_font);
     axisX->setRange(x_min, x_max);
-    //axisX->setTickCount((series0->count()/((x_max-x_min)/16))+1); //Used with static X ticks (default)
-    axisX->setTickType(QValueAxis::TicksDynamic);           //Set dynamic X ticks
-    axisX->setTickAnchor(0);                                //first X tick position
-    axisX->setTickInterval(((x_max-x_min) / 160) * 10);     //16 X ticks in any range
+    /*axisX->setTickType(QValueAxis::TicksFixed);
+    //axisX->setTickCount((series0->count()/((x_max-x_min)/16))+1); //Used with static X ticks (default)*/
+
+    axisX->setTickType(QValueAxis::TicksDynamic);       //Set dynamic X ticks
+    axisX->setTickAnchor(0);                            //first X tick position
+    uint tick_near = (range - 1) / 14;
+    if (tick_near == 0) tick_near = 1;
+    uint size = sizeof(tick_values);
+    for (uint i = 0; i < size; i++) {
+        if (tick_near < tick_values[i]) {
+            tick_near = tick_values[i-1];
+            break;
+        }
+    }
+    axisX->setTickInterval(tick_near);
     chart->addAxis(axisX, Qt::AlignBottom);
     series->attachAxis(axisX);
 
@@ -388,7 +400,7 @@ void MainWindow::redraw_chart(bool rflag)
     }
 
 
-    chart->setMargins(QMargins(0,0,0,0));
+    chart->setMargins(QMargins(0,0,5,0));   //left, top, right, and bottom
     //chart->setBackgroundVisible(false);
 
     ui->graphicsView->setRenderHint(QPainter::Antialiasing);
