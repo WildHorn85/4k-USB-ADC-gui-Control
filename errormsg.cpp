@@ -78,6 +78,9 @@ ErrorMsg::ErrorMsg(int errnum, QWidget *parent) :
     case 404:
         sprintf(err_msg,"ERROR %d: WH_ADC_NOT_FOUND_BY_NAME (ADC device not found. Unplug other devices from PC or select another port!)",errnum);
         break;
+    case 100:
+        sprintf(err_msg,"ERROR %d: WH_FILE_OPEN_ERROR (Can not open file!)",errnum);
+        break;
     default:
         sprintf(err_msg,"ERROR %d: unknown error",errnum);
         break;

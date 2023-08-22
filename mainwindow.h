@@ -51,6 +51,10 @@ private slots:
   void on_y_max_editingFinished();
   void on_check_log10_stateChanged();
   void on_error(int errnum);
+  void on_sb_mark_editingFinished();
+  void on_cb_mark_stateChanged();
+
+  void on_btn_timer_reset_clicked();
 
   private:
   Ui::MainWindow *ui;

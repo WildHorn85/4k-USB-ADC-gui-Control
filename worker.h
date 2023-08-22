@@ -23,6 +23,7 @@ public:
 signals:
     void SignalToObj_mainThreadGUI();
     void timeout();
+    void error_w(int);
 
 public slots:
     void StopWork();

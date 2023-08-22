@@ -7,6 +7,7 @@
  */
 #include "adc_control.h"
 #include "ftd2xx.h"
+//#include <QDateTime>
 
 extern unsigned long adc_out_buff[4096];	// буфер памяти АЦП
 
@@ -141,9 +142,8 @@ int adc_write_mem(ulong* Array, uint size, uint val_ch) {
     }
 
     uchar* wrt = new uchar[mem_size];
-    //uchar wrt[mem_size];
     memset(wrt,0,mem_size);
-    union {uchar bt[4]; ulong chan;} t_uni;
+    union {BYTE bt[4]; DWORD chan;} t_uni;
 
     if (val_ch == 0 || val_ch == 1) {
         for (uint i = 0; i < size; i++) {
@@ -186,7 +186,7 @@ int adc_read_mem(ulong (&Array)[4096], ulong *summ, uint size, uint val_ch) {
     uchar* buf = new uchar[mem_size];
     //uchar buf[mem_size];
     memset(buf,0,mem_size);
-    union {uchar bt[4]; ulong chan;} t_uni;
+    union {BYTE bt[4]; DWORD chan;} t_uni;
     (*summ) = 0;
 
     if ((ftStatus = FT_Write(ftHandle, &ADC_READ, 1, &BytesWritten)) != FT_OK) return ftStatus;		// Не удалось отправить команду на чтение памяти АЦП
@@ -195,11 +195,11 @@ int adc_read_mem(ulong (&Array)[4096], ulong *summ, uint size, uint val_ch) {
         if (BytesReceived == mem_size) {		// FT_Read OK
             (*summ) = 0;
             /* DUMP FOR DEBUG */
-            //char filenamedump[31];
-            //qint64 curr_sec = QDateTime::currentMSecsSinceEpoch();
-            //sprintf(filenamedump,"dump-%d-%lld.txt", val_ch, curr_sec);
-            //FILE *filedump;
-            //filedump = fopen(filenamedump, "w");
+            /*char filenamedump[31];
+            qint64 curr_sec = QDateTime::currentMSecsSinceEpoch();
+            sprintf(filenamedump,"dump-%d-%lld.txt", val_ch, curr_sec);
+            FILE *filedump;
+            filedump = fopen(filenamedump, "w");*/
             /*****************/
             for(uint i=0; i<size; i++) {
                 if (val_ch == 2) {
