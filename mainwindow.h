@@ -11,7 +11,6 @@
 #include <QDebug>
 #include <QAreaSeries>
 #include <QLogValueAxis>
-#include <QtGlobal>
 
 #include "adc_control.h"
 #include "worker.h"

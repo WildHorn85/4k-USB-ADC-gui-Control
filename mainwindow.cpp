@@ -348,7 +348,6 @@ void MainWindow::redraw_chart(bool rflag)
     axisX->setRange(x_min, x_max);
     /*axisX->setTickType(QValueAxis::TicksFixed);
     //axisX->setTickCount((series0->count()/((x_max-x_min)/16))+1); //Used with static X ticks (default)*/
-
     axisX->setTickType(QValueAxis::TicksDynamic);       //Set dynamic X ticks
     axisX->setTickAnchor(0);                            //first X tick position
     uint tick_near = (range - 1) / 14;
