@@ -9,24 +9,23 @@
 #include "ftd2xx.h"
 //#include <QDateTime>
 
-extern unsigned long adc_out_buff[4096];	// буфер памяти АЦП
+extern unsigned long adc_out_buff[4096];    // буфер памяти АЦП
 
 /* Приблуды для работы с устройством АЦП */
-FT_HANDLE ftHandle;					// указатель на устройство АЦП
+FT_HANDLE ftHandle;             // указатель на устройство АЦП
 FT_STATUS ftStatus;
 DWORD BytesWritten;
 DWORD BytesReceived;
 
-/* Открытие устройства АЦП (lvl 3) */
+/* Открытие устройства АЦП */
 int adc_begin(bool val_init_flag, uint* opt_array, bool force_dev, bool force_rmd) {
     if (force_rmd) system("sudo rmmod ftdi_sio usbserial > /dev/null 2>&1");
 	static FT_PROGRAM_DATA Data;
 	static FT_DEVICE ftDevice;
-    char OriginDev_1ch[64] = "USB_spectrometric_ADC_4K";	//искомое имя старого устройства (1ch)
-	char OriginDev_2ch[64] = "USB_spectrometric_4ADC_4K";	//искомое имя нового устройства (2ch)
+    char OriginDev_1ch[64] = "USB_spectrometric_ADC_4K";    //искомое имя старого устройства (1ch)
+    char OriginDev_2ch[64] = "USB_spectrometric_4ADC_4K";   //искомое имя нового устройства (2ch)
 
 	/* Открываем девайс на чипе FT на порту, указанном в settings.ini */
-    //ftStatus = FT_Open(opt_array[0], &ftHandle);
     if((ftStatus = FT_Open(opt_array[0], &ftHandle)) != FT_OK) return ftStatus;	//Error FT - Что-то пошло не так при открытии порта
 	
     if (val_init_flag) {						//Если инициализация первая (начальная), то узнаём подробности о подключённом девайсе
@@ -69,25 +68,22 @@ int adc_begin(bool val_init_flag, uint* opt_array, bool force_dev, bool force_rm
 	}
 
 	/* Настраиваем параметры порта */
-    //if (FT_SetBaudRate(ftHandle, 115200) != FT_OK) return 406;
     if((ftStatus = FT_SetBaudRate(ftHandle, opt_array[4])) != FT_OK) return ftStatus;
     if((ftStatus = FT_SetDataCharacteristics(ftHandle, FT_BITS_8, FT_STOP_BITS_1, FT_PARITY_NONE)) != FT_OK) return ftStatus;
     if((ftStatus = FT_SetFlowControl(ftHandle, FT_FLOW_RTS_CTS, 0, 0)) != FT_OK) return ftStatus;
     if((ftStatus = FT_SetDtr(ftHandle)) != FT_OK) return ftStatus;
     if((ftStatus = FT_SetRts(ftHandle)) != FT_OK) return ftStatus;
 
-    //qDebug() << "CONNECTION - OK!";
-
 	return 0;
 }
 
-/* Закрытие устройства АЦП (lvl 3) */
+/* Закрытие устройства АЦП */
 int adc_close() {
     if ((ftStatus = FT_Close(ftHandle)) != FT_OK) return ftStatus;
     return 0;
 }
 
-/* Остановка АЦП (lvl 3) */
+/* Остановка АЦП */
 int adc_stop(uint val_ch) {
     uchar ADC_STOP;
     if (val_ch == 2) ADC_STOP = 2;      //стоп 2-го входа
@@ -96,7 +92,7 @@ int adc_stop(uint val_ch) {
 	return 0;
 }
 
-/*Запуск АЦП (lvl 3) */
+/*Запуск АЦП */
 int adc_start(uint val_ch) {
     uchar ADC_START;
     if (val_ch == 2) ADC_START = 3;     //старт 2-го входа
@@ -105,9 +101,9 @@ int adc_start(uint val_ch) {
 	return 0;
 }
 
-/* Очистка памяти АЦП (lvl 3) */
+/* Очистка памяти АЦП */
 int adc_clear_mem(uint val_ch) {
-    uchar ADC_WRITE;
+    BYTE ADC_WRITE;
     DWORD mem_size;          // размер памяти АЦП в байтах
 
     if (val_ch == 0) {      //на 1 байт больше!
@@ -118,8 +114,7 @@ int adc_clear_mem(uint val_ch) {
         ADC_WRITE = 32;
     }
 
-    uchar* cls = new uchar[mem_size];
-    //uchar cls[mem_size];
+    BYTE* cls = new BYTE[mem_size];
     memset(cls,0,mem_size);
 
     if ((ftStatus = FT_Write(ftHandle, &ADC_WRITE, 1, &BytesWritten)) != FT_OK) return ftStatus;      // Не удалось отправить команду на очистку памяти
@@ -130,7 +125,7 @@ int adc_clear_mem(uint val_ch) {
 }
 
 int adc_write_mem(ulong* Array, uint size, uint val_ch) {
-    uchar ADC_WRITE;
+    BYTE ADC_WRITE;
     DWORD mem_size;              // размер памяти АЦП в байтах
 
     if (val_ch == 0) {          //на 1 байт больше!
@@ -141,7 +136,7 @@ int adc_write_mem(ulong* Array, uint size, uint val_ch) {
         ADC_WRITE = 32;
     }
 
-    uchar* wrt = new uchar[mem_size];
+    BYTE* wrt = new BYTE[mem_size];
     memset(wrt,0,mem_size);
     union {BYTE bt[4]; DWORD chan;} t_uni;
 
@@ -170,9 +165,9 @@ int adc_write_mem(ulong* Array, uint size, uint val_ch) {
     return 0;
 }
 
-/* Чтение памяти АЦП (lvl 3) */
+/* Чтение памяти АЦП */
 int adc_read_mem(ulong (&Array)[4096], ulong *summ, uint size, uint val_ch) {
-    uchar ADC_READ;
+    BYTE ADC_READ;
     DWORD mem_size;          // размер памяти АЦП в байтах
 
     if (val_ch == 0) {
@@ -183,14 +178,14 @@ int adc_read_mem(ulong (&Array)[4096], ulong *summ, uint size, uint val_ch) {
         ADC_READ = 16;
     }
 
-    uchar* buf = new uchar[mem_size];
+    BYTE* buf = new BYTE[mem_size];
     //uchar buf[mem_size];
     memset(buf,0,mem_size);
     union {BYTE bt[4]; DWORD chan;} t_uni;
     (*summ) = 0;
 
-    if ((ftStatus = FT_Write(ftHandle, &ADC_READ, 1, &BytesWritten)) != FT_OK) return ftStatus;		// Не удалось отправить команду на чтение памяти АЦП
-    if ((ftStatus = FT_SetTimeouts(ftHandle,1000,0)) != FT_OK) return ftStatus;		//PORT READ TIMEOUT
+    if ((ftStatus = FT_Write(ftHandle, &ADC_READ, 1, &BytesWritten)) != FT_OK) return ftStatus;     // Не удалось отправить команду на чтение памяти АЦП
+    if ((ftStatus = FT_SetTimeouts(ftHandle,1000,0)) != FT_OK) return ftStatus;                     //PORT READ TIMEOUT
     if ((ftStatus = FT_Read(ftHandle, buf, mem_size, &BytesReceived)) == FT_OK) {
         if (BytesReceived == mem_size) {		// FT_Read OK
             (*summ) = 0;
@@ -233,24 +228,23 @@ int adc_read_mem(ulong (&Array)[4096], ulong *summ, uint size, uint val_ch) {
 	} else {
         return ftStatus;            // Не удалось прочитать память АЦП (Read Failed)
 	}
-
     return 0;
 }
 
-/* Сброс логики АЦП (lvl 3) */
+/* Сброс логики АЦП */
 int adc_logic_reset() {
-    uchar ADC_RESET = 128;			//байт на ресет
+    BYTE ADC_RESET = 128;			//байт на ресет
     if ((ftStatus = FT_Write(ftHandle, &ADC_RESET, 1, &BytesWritten)) != FT_OK) return ftStatus;         // Не удалось отправить команду на сброс логики (ADC_RESET)
 	return 0;
 }
 
 /* Сброс порогов АЦП (lvl 3) */
 int adc_thld_reset(uint val_ch) {
-    uchar ADC_CHANGE = 64;  //изменение порога на один шаг из 128 (0-127)
-    uchar ADC_GRUBO;        //изменение порога грубо
-    uchar ADC_TOCHN;        //изменение порога точно
-    uchar ADC_MINUS;        //изменение порога в минус (только для 2ch ADC)
-    uchar ADC_SEL_CH;       //выбор входа
+    BYTE ADC_CHANGE = 64;  //изменение порога на один шаг из 128 (0-127)
+    BYTE ADC_GRUBO;        //изменение порога грубо
+    BYTE ADC_TOCHN;        //изменение порога точно
+    BYTE ADC_MINUS;        //изменение порога в минус (только для 2ch ADC)
+    BYTE ADC_SEL_CH;       //выбор входа
 
 	if (val_ch == 0) {
 		ADC_GRUBO = 0;		//изменение порога грубо в минус
@@ -297,11 +291,11 @@ int adc_thld_reset(uint val_ch) {
 
 /* Установка порогов АЦП (lvl 3) */
 int adc_thld_set(uint val_ch, uint val_thld_grubo, uint val_thld_tochn) {
-    uchar ADC_CHANGE = 64;			//изменение порога, один шаг из 128 (0-127)
-    uchar ADC_GRUBO;			//изменение порога грубо
-    uchar ADC_TOCHN;			//изменение порога точно
-    uchar ADC_PLUS;			//изменение порога в плюс (только для 2ch ADC)
-    uchar ADC_SEL_CH;		//выбор входа
+    BYTE ADC_CHANGE = 64;			//изменение порога, один шаг из 128 (0-127)
+    BYTE ADC_GRUBO;			//изменение порога грубо
+    BYTE ADC_TOCHN;			//изменение порога точно
+    BYTE ADC_PLUS;			//изменение порога в плюс (только для 2ch ADC)
+    BYTE ADC_SEL_CH;		//выбор входа
 	
 	if (val_ch == 0) {
 		ADC_GRUBO = 2;		//изменение порога грубо в плюс
@@ -348,24 +342,22 @@ int settings_ini(uint* opt_array) {
     FILE *fileini;
     fileini = fopen(filenameini, "r");
 
-    if(fileini == NULL){		//если файла нет, то используем стандартные значения
-        //qDebug() << "SETTING.INI not found |" << fileini;
-        opt_array[0] = 0;   // номер устройства FTDI на порту
-        opt_array[1] = 0;   // номер рабочего канала АЦП
-        opt_array[2] = 16;  // значение порога "грубо"
-        opt_array[3] = 0;   // значение порога "точно"
-        opt_array[4] = 921600;   // baudrate
-        fileini = fopen(filenameini, "w");				//пересоздаём файл с настройками заново
+    if(fileini == NULL){        //если файла нет, то используем стандартные значения
+        opt_array[0] = 0;       // номер устройства FTDI на порту
+        opt_array[1] = 0;       // номер рабочего канала АЦП
+        opt_array[2] = 16;      // значение порога "грубо"
+        opt_array[3] = 0;       // значение порога "точно"
+        opt_array[4] = 921600;  // baudrate
+        fileini = fopen(filenameini, "w");  //пересоздаём файл с настройками заново
         fprintf(fileini, "%01d             //номер устройства FTDI на порту (обычно 0)\n", opt_array[0]);
         fprintf(fileini, "%07d       //baudrate (default is 921600)\n", opt_array[4]);
         fprintf(fileini, "%01d             //количество каналов в устройстве\n", 1);
         fprintf(fileini, "%01d             //выбранный канал анализатора\n", 1);
         fprintf(fileini, "%03d           //порог АЦП (грубо)\n", opt_array[2]);
         fprintf(fileini, "%03d           //порог АЦП (точно)\n", opt_array[3]);
-        fclose (fileini);								//закрываем файл с настройками
-        return 501;										//Error 501 - Нет файла настроек, используем настройки по умолчанию
+        fclose (fileini);       //закрываем файл с настройками
+        return 501;             //Error 501 - Нет файла настроек, используем настройки по умолчанию
     } else {
-        //qDebug() << "SETTING.INI found |" << fileini;
         bool errflag = 0;
         int opt_dev;
         int opt_chan;
@@ -377,50 +369,50 @@ int settings_ini(uint* opt_array) {
         char baudrate_str [8];
         char tmp_buff [100];
 
-        if (fgets(pr_str, 2, fileini) != NULL ) {		//читаем первую сторку (номер устройства FTDI на порту)
-            opt_array[0] = atoi(pr_str);				//переводим считанный текст вы цифру
-            fgets (tmp_buff, 100, fileini);				//дочитываем строку до конца
+        if (fgets(pr_str, 2, fileini) != NULL ) {   //читаем первую сторку (номер устройства FTDI на порту)
+            opt_array[0] = atoi(pr_str);            //переводим считанный текст вы цифру
+            fgets (tmp_buff, 100, fileini);         //дочитываем строку до конца
         } else {
-            opt_array[0] = 0;							//а если не прочиталось, то используем стандартное значение
+            opt_array[0] = 0;                       //а если не прочиталось, то используем стандартное значение
             errflag = 1;
         }
-        if (fgets(baudrate_str, 8, fileini) != NULL ) {		//читаем сторку (baudrate)
-            opt_array[4] = atoi(baudrate_str);				//переводим считанный текст вы цифру
-            fgets (tmp_buff, 100, fileini);				//дочитываем строку до конца
+        if (fgets(baudrate_str, 8, fileini) != NULL ) { //читаем сторку (baudrate)
+            opt_array[4] = atoi(baudrate_str);
+            fgets (tmp_buff, 100, fileini);
         } else {
-            opt_array[4] = 921600;							//а если не прочиталось, то используем стандартное значение
+            opt_array[4] = 921600;
             errflag = 1;
         }
-        if (fgets(ch_str, 2, fileini) != NULL ) {		//читаем вторую сторку (количество каналов)
-            opt_dev = atoi(ch_str);                     //переводим считанный текст вы цифру
-            fgets (tmp_buff, 100, fileini);				//дочитываем строку до конца
+        if (fgets(ch_str, 2, fileini) != NULL ) {		//читаем сторку (количество каналов)
+            opt_dev = atoi(ch_str);
+            fgets (tmp_buff, 100, fileini);
         } else {
-            opt_dev = 1;                                //а если не прочиталось, то используем стандартное значение
+            opt_dev = 1;
             errflag = 1;
         }
-        if (fgets(spec_str, 3, fileini) != NULL ) {		//читаем третью сторку (номер рабочего канала)
-            opt_chan = atoi(spec_str);                  //переводим считанный текст вы цифру
-            fgets (tmp_buff, 100, fileini);				//дочитываем строку до конца
+        if (fgets(spec_str, 3, fileini) != NULL ) {		//читаем сторку (номер рабочего канала)
+            opt_chan = atoi(spec_str);
+            fgets (tmp_buff, 100, fileini);
         } else {
-            opt_chan = 1;                               //а если не прочиталось, то используем стандартное значение
+            opt_chan = 1;
             errflag = 1;
         }
-        if (fgets(coarse_str, 4, fileini) != NULL ) {	//читаем четвёртую сторку ("грубо")
-            opt_array[2] = atoi(coarse_str);			//переводим считанный текст вы цифру
-            fgets (tmp_buff, 100, fileini);				//дочитываем строку до конца
+        if (fgets(coarse_str, 4, fileini) != NULL ) {	//читаем сторку ("грубо")
+            opt_array[2] = atoi(coarse_str);
+            fgets (tmp_buff, 100, fileini);
         } else {
-            opt_array[2] = 16;							//а если не прочиталось, то используем стандартное значение
+            opt_array[2] = 16;
             errflag = 1;
         }
-        if (fgets(fine_str, 4, fileini) != NULL) {		//читаем пятую строку ("точно")
-            opt_array[3] = atoi(fine_str);				//переводим считанный текст вы цифру
-            fgets (tmp_buff, 100, fileini);				//дочитываем строку до конца
+        if (fgets(fine_str, 4, fileini) != NULL) {		//читаем строку ("точно")
+            opt_array[3] = atoi(fine_str);
+            fgets (tmp_buff, 100, fileini);
         } else {
-            opt_array[3] = 0;							//а если не прочиталось, то используем стандартное значение
+            opt_array[3] = 0;
             errflag = 1;
         }
 
-        switch(opt_dev) {                               //создаём првильный val_ch из сочетания количества каналов и выбранного канала
+        switch(opt_dev) {       //создаём првильный val_ch из сочетания количества каналов и выбранного канала
         case 1:
             opt_array[1] = 0;
             break;
@@ -443,11 +435,11 @@ int settings_ini(uint* opt_array) {
         }
 
         fflush(NULL);
-        fclose (fileini);								//закрываем файл с настройками
+        fclose (fileini);   //закрываем файл с настройками
 
         if (errflag) {
-            remove(filenameini);						//удаляем повреждённый файл настроек совсем
-            fileini = fopen(filenameini, "w");			//пересоздаём файл с текущими настройками
+            remove(filenameini);                //удаляем повреждённый файл настроек совсем
+            fileini = fopen(filenameini, "w");  //пересоздаём файл с текущими настройками
             fprintf(fileini, "%01d             //номер устройства FTDI на порту (обычно 0)\n", opt_array[0]);
             fprintf(fileini, "%07d       //baudrate (default is 921600)\n", opt_array[4]);
             fprintf(fileini, "%01d             //количество каналов в устройстве\n", opt_dev);
@@ -455,12 +447,12 @@ int settings_ini(uint* opt_array) {
             fprintf(fileini, "%03d           //порог АЦП (грубо)\n", opt_array[2]);
             fprintf(fileini, "%03d           //порог АЦП (точно)\n", opt_array[3]);
             fflush(NULL);
-            fclose (fileini);							//закрываем файл с настройками
-            return 502;									//Error 502 - Файл настроек прочитался с ошибками, файл пересоздан
+            fclose (fileini);                   //закрываем файл с настройками
+            return 502;                         //Error 502 - Файл настроек прочитался с ошибками, файл пересоздан
         }
     }
     fflush(NULL);
-    return 0;											//Нормальное завершение. Ну, или что-то на него похожее.
+    return 0;                                   //Нормальное завершение. Ну, или что-то на него похожее.
 }
 
 int settings_save(uint* opt_array) {
@@ -469,7 +461,7 @@ int settings_save(uint* opt_array) {
     FILE *fileini;
     int opt_dev;
     int opt_chan;
-    switch(opt_array[1]) {          //разворачиваем количество каналов и выбранный канал из val_ch
+    switch(opt_array[1]) {      //разворачиваем количество каналов и выбранный канал из val_ch
     case 0:
         opt_dev = 1;
         opt_chan = 1;
@@ -487,8 +479,8 @@ int settings_save(uint* opt_array) {
         opt_chan = 1;
         break;
     }
-    remove(filenameini);						//удаляем старый файл настроек
-    fileini = fopen(filenameini, "w");			//пересоздаём файл с текущими настройками
+    remove(filenameini);                    //удаляем старый файл настроек
+    fileini = fopen(filenameini, "w");      //пересоздаём файл с текущими настройками
     fprintf(fileini, "%01d             //номер устройства FTDI на порту (обычно 0)\n", opt_array[0]);
     fprintf(fileini, "%07d       //baudrate (default is 921600)\n", opt_array[4]);
     fprintf(fileini, "%01d             //количество каналов в устройстве\n", opt_dev);
@@ -496,6 +488,6 @@ int settings_save(uint* opt_array) {
     fprintf(fileini, "%03d           //порог АЦП (грубо)\n", opt_array[2]);
     fprintf(fileini, "%03d           //порог АЦП (точно)\n", opt_array[3]);
     fflush(NULL);
-    fclose (fileini);							//закрываем файл с настройками
+    fclose (fileini);                       //закрываем файл с настройками
     return 0;
 }

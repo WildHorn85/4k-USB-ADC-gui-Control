@@ -32,7 +32,6 @@ void worker::do_Work()
             Sleep(1);
         #endif
     }
-
     QMetaObject::invokeMethod(this, "do_Work", Qt::QueuedConnection);
 }
 

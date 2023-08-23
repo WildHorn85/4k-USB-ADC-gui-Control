@@ -41,8 +41,6 @@ Dialog::Dialog(QWidget *parent) :
             ui->sb_chan->setValue(1);
             break;
     }
-
-    //qDebug() << "dialog INIT options is:" << options[0] << options[1] << options[2] << options[3] << options[4];
 }
 
 Dialog::~Dialog()
@@ -78,7 +76,6 @@ void Dialog::on_buttonBox_accepted()
             options[1] = 0;
             break;
     }
-    //qDebug() << "dialog ACCEPT options is:" << options[0] << options[1] << options[2] << options[3]<< options[4];
     adc_thld_reset(options[1]);
     adc_thld_set(options[1], options[2], options[3]);
 }
@@ -113,7 +110,6 @@ void Dialog::on_buttonSave_clicked()
     }
 
     settings_save(options);
-    //qDebug() << "dialog SAVE options is:" << options[0] << options[1] << options[2] << options[3] << options[4];
     adc_thld_reset(options[1]);
     adc_thld_set(options[1], options[2], options[3]);
 }
@@ -122,11 +118,11 @@ void Dialog::on_buttonSave_clicked()
 void Dialog::on_checkBox_stateChanged()
 {
     if (ui->checkBox->isChecked()) {
-            ui->sb_dev->setEnabled(false);
-            force_dt = 0;
+        ui->sb_dev->setEnabled(false);
+        force_dt = 0;
     } else {
-            ui->sb_dev->setEnabled(true);
-            force_dt = 1;
+        ui->sb_dev->setEnabled(true);
+        force_dt = 1;
     }
 }
 

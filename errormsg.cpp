@@ -6,9 +6,7 @@ ErrorMsg::ErrorMsg(int errnum, QWidget *parent) :
     ui(new Ui::ErrorMsg)
 {
     ui->setupUi(this);
-
     this->setWindowTitle(QStringLiteral("ERROR %1").arg(errnum));
-    //QString errmsg;
 
     char err_msg[256];
     switch (errnum) {

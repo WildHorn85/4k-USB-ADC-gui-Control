@@ -16,12 +16,9 @@ ulong max_val = 1000;
 ulong summ = 0;
 uint tick_values[17] = {1, 2, 4, 5, 10, 20, 30, 40, 50, 100, 150, 200, 250, 300, 400, 500, 1000};
 
-MainWindow::MainWindow(QWidget *parent)
-  : QMainWindow(parent)
-  , ui(new Ui::MainWindow)
+MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-
     QDir::setCurrent(qApp->applicationDirPath());
 
     int fResult;
@@ -57,7 +54,7 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow()
 {
-  delete ui;
+    delete ui;
 }
 
 void MainWindow::on_btn_quit_clicked()
@@ -67,7 +64,7 @@ void MainWindow::on_btn_quit_clicked()
 
 void MainWindow::on_btn_connect_clicked()
 {
-    if (!flag_connected) {    //IF NO CONNECTION
+    if (!flag_connected) {      //IF NO CONNECTION
         ui->statusbar->showMessage("Connecting...");
         int fResult = adc_begin(true, options, force_dt, force_rmmod);
         if (fResult != 0) {     //CONNECTION ERROR
@@ -91,7 +88,7 @@ void MainWindow::on_btn_connect_clicked()
             if (int fResult = adc_read_mem(adc_out_buff, &summ, 4096, options[1])) emit error(fResult);
             emit call_redraw(1);
         }
-    } else {                  //IF CONNECTION PRESIST
+    } else {                    //IF CONNECTION PRESIST
         int fResult = adc_close();
         if (fResult != 0) {     //DISCONNECT ERROR
             emit error(fResult);
@@ -127,9 +124,9 @@ void MainWindow::on_btn_start_clicked()
                 emit startWorkSignal();
                 WorkerThread->start();
             } else {
-                 ui->statusbar->showMessage("Timer is empty!");
-                 ui->btn_start->setText("Start");
-                 flag_started = 0;
+                ui->statusbar->showMessage("Timer is empty!");
+                ui->btn_start->setText("Start");
+                flag_started = 0;
             }
         }
     } else {
@@ -168,8 +165,7 @@ void MainWindow::on_btn_clean_clicked()
 
 void MainWindow::on_btn_load_clicked()
 {
-    QString fileName = QFileDialog::getOpenFileName(this, tr("Open Spectrum"), "", tr("Spectra Files (*.txt *.dat)"));
-    //qDebug() << "load file name:" << fileName;
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Open Spectrum"), "", tr("Spectra Files (*.txt)"));
     QFile file(fileName);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         emit error(100);
@@ -247,7 +243,6 @@ void MainWindow::on_btn_options_clicked()
         if (int fResult = adc_read_mem(adc_out_buff, &summ, 4096, options[1])) emit error(fResult);
     }
     emit call_redraw(flag_connected);
-    //qDebug() << options[0] << options[1] << options[2] << options[3] << options[4];
 }
 
 void MainWindow::redraw_chart(bool rflag)
@@ -255,33 +250,8 @@ void MainWindow::redraw_chart(bool rflag)
     ulong adc_draw_buff[4096];
     bool flag_overload = 0;
 
-    /*if (rflag) {
-        int fResult = adc_read_mem(adc_out_buff, &summ, 4096, options[1]);  // функция чтения памяти АЦП
-        if (fResult) {
-            emit error(fResult);
-            return;
-        }
-        if (summ > ulong(8500000000000)) {
-            qDebug() << "GRAPH OVERLOAD";
-            ui->statusbar->showMessage("GRAPH OVERLOAD");
-            for (int i = 0; i < 4096; i++) adc_draw_buff[i] = 1000;
-        } else {
-            for (int i = 0; i < 4096; i++) adc_draw_buff[i] = adc_out_buff[i];
-        }
-    } else {
-        for (int i = 0; i < 4096; i++) summ += adc_out_buff[i];
-        if (summ > ulong(8500000000000)) {
-            qDebug() << "GRAPH OVERLOAD";
-            ui->statusbar->showMessage("GRAPH OVERLOAD");
-            for (int i = 0; i < 4096; i++) adc_draw_buff[i] = 1000;
-        } else {
-            for (int i = 0; i < 4096; i++) adc_draw_buff[i] = adc_out_buff[i];
-        }
-    }*/
-
     if (!rflag) for (int i = 0; i < 4096; i++) summ += adc_out_buff[i];
     if (summ > ulong(8500000000000)) {
-        //ui->statusbar->showMessage("GRAPH OVERLOAD");
         flag_overload = 1;
         for (int i = 0; i < 4096; i++) adc_draw_buff[i] = 1000;
     } else {
@@ -293,7 +263,7 @@ void MainWindow::redraw_chart(bool rflag)
     QVector<QPointF> points(range);
     for(std::vector<int>::size_type i = 0; i < range; ++i) {
         if (ui->check_log10->isChecked()) {
-            if (adc_draw_buff[x_min+i] == 0) points[i] = QPointF(x_min+i, 1);    //remove zeros from log10
+            if (adc_draw_buff[x_min+i] == 0) points[i] = QPointF(x_min+i, 1);   //remove zeros from log10
             else points[i] = QPointF(x_min+i, adc_draw_buff[x_min+i]);
         } else {
             points[i] = QPointF(x_min+i, adc_draw_buff[x_min+i]);
@@ -316,7 +286,7 @@ void MainWindow::redraw_chart(bool rflag)
     }
 
     auto series = new QAreaSeries(series0);
-    QPen pen(0x0B5394); //blue
+    QPen pen(0x0B5394);     //blue
     pen.setWidth(1);
     series->setPen(pen);
 
@@ -347,9 +317,9 @@ void MainWindow::redraw_chart(bool rflag)
     axisX->setLabelsFont(label_font);
     axisX->setRange(x_min, x_max);
     /*axisX->setTickType(QValueAxis::TicksFixed);
-    //axisX->setTickCount((series0->count()/((x_max-x_min)/16))+1); //Used with static X ticks (default)*/
-    axisX->setTickType(QValueAxis::TicksDynamic);       //Set dynamic X ticks
-    axisX->setTickAnchor(0);                            //first X tick position
+    axisX->setTickCount((series0->count()/((x_max-x_min)/16))+1); //Used with static X ticks (default)*/
+    axisX->setTickType(QValueAxis::TicksDynamic);   //Set dynamic X ticks
+    axisX->setTickAnchor(0);                        //first X tick position
     uint tick_near = (range - 1) / 14;
     if (tick_near == 0) tick_near = 1;
     uint size = sizeof(tick_values);
