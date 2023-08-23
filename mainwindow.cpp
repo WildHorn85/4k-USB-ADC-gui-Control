@@ -19,6 +19,7 @@ uint tick_values[17] = {1, 2, 4, 5, 10, 20, 30, 40, 50, 100, 150, 200, 250, 300,
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+    this->setWindowTitle("4k USB ADC Control v.1.0");
     QDir::setCurrent(qApp->applicationDirPath());
 
     int fResult;
