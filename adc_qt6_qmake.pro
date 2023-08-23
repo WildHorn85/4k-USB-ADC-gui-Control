@@ -48,7 +48,7 @@ unix:!macx: LIBS += -L$$PWD/./ -lftd2xx
 INCLUDEPATH += $$PWD/.
 DEPENDPATH += $$PWD/.
 
-#RC_ICONS = adc_icon.ico
+RC_ICONS = adc_icon.ico
 
 RESOURCES += \
     images.qrc
