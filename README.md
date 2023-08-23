@@ -1,5 +1,5 @@
-# ADC Control QT
-Parsec 4K ADC USB device control software. It support one and two-input devices with original descriptions "USB_spectrometric_ADC_4K" and "USB_spectrometric_4ADC_4K".
+# 4k USB ADC gui Control
+Parsec 4K ADC USB device control software. It support one- and two-input devices with original descriptions "USB_spectrometric_ADC_4K" and "USB_spectrometric_4ADC_4K".
 
 Original device: http://www.parsek.ru/ru/products/4KSACPUSB.html
 
