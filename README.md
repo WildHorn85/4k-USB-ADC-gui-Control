@@ -3,6 +3,7 @@ Parsec 4K ADC USB device control software. It support one- and two-input devices
 
 # Dependencies
 FTDI D2XX drivers: https://ftdichip.com/drivers/d2xx-drivers/
+Microsoft Visual C++ Redistributable: https://aka.ms/vs/17/release/vc_redist.x64.exe
 
 # Hardware
 Original device: http://www.parsek.ru/ru/products/4KSACPUSB.html
