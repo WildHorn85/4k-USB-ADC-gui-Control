@@ -22,7 +22,9 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     series(new QAreaSeries(series0)),
     marker0(new QLineSeries()),
     axisX(new QValueAxis()),
-    axisY(nullptr)
+    axisY(nullptr),
+    lastDataFrameMs(0),
+    forceDataFrame(true)
 {
     ui->setupUi(this);
     this->setWindowTitle("4k USB ADC Control v.1.0");
@@ -201,11 +203,13 @@ void MainWindow::on_btn_clean_clicked()
             max_val = 1000;
             ui->statusbar->showMessage("ADC Memory Cleared");
             if (int fResult = adc_read_mem(adc_out_buff, &summ, 4096, options[1])) emit error(fResult);
+            forceDataFrame = true;
             emit call_redraw(flag_connected);
         }
     } else {
         for (int i = 0; i < 4096; i++) adc_out_buff[i] = 0;
         summ = 0;
+        forceDataFrame = true;
         emit call_redraw(flag_connected);
     }
 }
@@ -232,6 +236,7 @@ void MainWindow::on_btn_load_clicked()
         if (int fResult = adc_write_mem(adc_out_buff, 4096, options[1])) emit error(fResult);
         if (int fResult = adc_read_mem(adc_out_buff, &summ, 4096, options[1])) emit error(fResult);
     }
+    forceDataFrame = true;
     emit call_redraw(flag_connected);
 }
 
@@ -289,6 +294,7 @@ void MainWindow::on_btn_options_clicked()
         if (int fResult = adc_thld_set(options[1], options[2], options[3])) emit error(fResult);
         if (int fResult = adc_read_mem(adc_out_buff, &summ, 4096, options[1])) emit error(fResult);
     }
+    forceDataFrame = true;
     emit call_redraw(flag_connected);
 }
 
@@ -309,16 +315,22 @@ void MainWindow::redraw_chart(bool rflag)
     }
 
     ulong range = x_max - x_min + 1;
-    QVector<QPointF> points(range);
-    for(std::vector<int>::size_type i = 0; i < range; ++i) {
-        if (ui->check_log10->isChecked()) {
-            if (adc_draw_buff[x_min+i] == 0) points[i] = QPointF(x_min+i, 1);   //remove zeros from log10
-            else points[i] = QPointF(x_min+i, adc_draw_buff[x_min+i]);
-        } else {
-            points[i] = QPointF(x_min+i, adc_draw_buff[x_min+i]);
+    qint64 nowMs = QDateTime::currentMSecsSinceEpoch();
+    bool shouldRenderData = forceDataFrame || rflag || (nowMs - lastDataFrameMs >= 1000);
+    if (shouldRenderData) {
+        QVector<QPointF> points(range);
+        for (ulong i = 0; i < range; ++i) {
+            if (ui->check_log10->isChecked()) {
+                if (adc_draw_buff[x_min+i] == 0) points[i] = QPointF(x_min+i, 1);   //remove zeros from log10
+                else points[i] = QPointF(x_min+i, adc_draw_buff[x_min+i]);
+            } else {
+                points[i] = QPointF(x_min+i, adc_draw_buff[x_min+i]);
+            }
         }
+        series0->replace(points);
+        lastDataFrameMs = nowMs;
+        forceDataFrame = false;
     }
-    series0->replace(points);
 
     //MAX Value from data
     if (ui->check_auto_y->isChecked()) {
@@ -460,6 +472,7 @@ void MainWindow::on_x_min_editingFinished()
 {
     x_min = ui->x_min->value();
     ui->x_max->setMinimum(x_min+10);
+    forceDataFrame = true;
     emit call_redraw(0);
 }
 
@@ -468,6 +481,7 @@ void MainWindow::on_x_max_editingFinished()
 {
     x_max = ui->x_max->value();
     ui->x_min->setMaximum(x_max-10);
+    forceDataFrame = true;
     emit call_redraw(0);
 }
 
@@ -479,6 +493,7 @@ void MainWindow::on_check_auto_y_stateChanged()
     } else {
         ui->y_max->setEnabled(true);
     }
+    forceDataFrame = true;
     emit call_redraw(0);
 }
 
@@ -497,6 +512,7 @@ void MainWindow::on_sb_mark_editingFinished()
 
 void MainWindow::on_check_log10_stateChanged()
 {
+    forceDataFrame = true;
     emit call_redraw(0);
 }
 

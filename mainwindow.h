@@ -13,6 +13,7 @@
 #include <QLogValueAxis>
 #include <QAbstractAxis>
 #include <QGraphicsTextItem>
+#include <QDateTime>
 
 #include "adc_control.h"
 #include "worker.h"
@@ -67,6 +68,8 @@ private:
     QLineSeries *marker0;
     QValueAxis *axisX;
     QAbstractAxis *axisY;
+    qint64 lastDataFrameMs;
+    bool forceDataFrame;
 };
 
 #endif // MAINWINDOW_H
