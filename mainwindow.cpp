@@ -16,7 +16,15 @@ ulong max_val = 1000;
 ulong summ = 0;
 uint tick_values[17] = {1, 2, 4, 5, 10, 20, 30, 40, 50, 100, 150, 200, 250, 300, 400, 500, 1000};
 
-MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow)
+MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow),
+    chart(new QChart()),
+    series0(new QLineSeries()),
+    series(new QAreaSeries(series0)),
+    marker0(new QLineSeries()),
+    axisX(new QValueAxis()),
+    axisY(nullptr),
+    lastDataFrameMs(0),
+    forceDataFrame(true)
 {
     ui->setupUi(this);
     this->setWindowTitle("4k USB ADC Control v.1.0");
@@ -49,6 +57,46 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     connect(myWorker, SIGNAL(timeout()), this, SLOT(thread_timeout()));
     connect(this, SIGNAL(error(int)), this, SLOT(on_error(int)));
     connect(myWorker, SIGNAL(error_w(int)), this, SLOT(on_error(int)));
+
+    chart->legend()->hide();
+    chart->addSeries(series);
+
+    QFont title_font;
+    title_font.setBold(1);
+    title_font.setPixelSize(11);
+    title_font.setPointSize(11);
+
+    QFont label_font;
+    label_font.setBold(0);
+    label_font.setPixelSize(10);
+    label_font.setPointSize(10);
+
+    axisX->setTitleText("ADC Channels");
+    axisX->setLabelFormat("%i");
+    axisX->setTitleFont(title_font);
+    axisX->setLabelsFont(label_font);
+    axisX->setTickType(QValueAxis::TicksDynamic);
+    axisX->setTickAnchor(0);
+    chart->addAxis(axisX, Qt::AlignBottom);
+    series->attachAxis(axisX);
+
+    QPen pen(0x0B5394);     //blue
+    pen.setWidth(1);
+    series->setPen(pen);
+
+    QLinearGradient gradient(QPointF(0, 0), QPointF(0, 1));
+    gradient.setColorAt(0.0, 0x23649e);
+    gradient.setColorAt(1.0, 0x23649e);
+    gradient.setCoordinateMode(QGradient::LogicalMode);
+    series->setBrush(gradient);
+
+    QPen pen_m(0xF50202);   //red
+    pen_m.setWidth(1);
+    marker0->setPen(pen_m);
+
+    chart->setMargins(QMargins(0,0,5,0));
+    ui->graphicsView->setRenderHint(QPainter::Antialiasing, false);
+    ui->graphicsView->setChart(chart);
 
     redraw_chart(0);
 }
@@ -155,11 +203,13 @@ void MainWindow::on_btn_clean_clicked()
             max_val = 1000;
             ui->statusbar->showMessage("ADC Memory Cleared");
             if (int fResult = adc_read_mem(adc_out_buff, &summ, 4096, options[1])) emit error(fResult);
+            forceDataFrame = true;
             emit call_redraw(flag_connected);
         }
     } else {
         for (int i = 0; i < 4096; i++) adc_out_buff[i] = 0;
         summ = 0;
+        forceDataFrame = true;
         emit call_redraw(flag_connected);
     }
 }
@@ -186,6 +236,7 @@ void MainWindow::on_btn_load_clicked()
         if (int fResult = adc_write_mem(adc_out_buff, 4096, options[1])) emit error(fResult);
         if (int fResult = adc_read_mem(adc_out_buff, &summ, 4096, options[1])) emit error(fResult);
     }
+    forceDataFrame = true;
     emit call_redraw(flag_connected);
 }
 
@@ -243,6 +294,7 @@ void MainWindow::on_btn_options_clicked()
         if (int fResult = adc_thld_set(options[1], options[2], options[3])) emit error(fResult);
         if (int fResult = adc_read_mem(adc_out_buff, &summ, 4096, options[1])) emit error(fResult);
     }
+    forceDataFrame = true;
     emit call_redraw(flag_connected);
 }
 
@@ -251,7 +303,10 @@ void MainWindow::redraw_chart(bool rflag)
     ulong adc_draw_buff[4096];
     bool flag_overload = 0;
 
-    if (!rflag) for (int i = 0; i < 4096; i++) summ += adc_out_buff[i];
+    if (!rflag) {
+        summ = 0;
+        for (int i = 0; i < 4096; i++) summ += adc_out_buff[i];
+    }
     if (summ > ulong(8500000000000)) {
         flag_overload = 1;
         for (int i = 0; i < 4096; i++) adc_draw_buff[i] = 1000;
@@ -259,18 +314,23 @@ void MainWindow::redraw_chart(bool rflag)
         for (int i = 0; i < 4096; i++) adc_draw_buff[i] = adc_out_buff[i];
     }
 
-    auto *series0 = new QLineSeries();
     ulong range = x_max - x_min + 1;
-    QVector<QPointF> points(range);
-    for(std::vector<int>::size_type i = 0; i < range; ++i) {
-        if (ui->check_log10->isChecked()) {
-            if (adc_draw_buff[x_min+i] == 0) points[i] = QPointF(x_min+i, 1);   //remove zeros from log10
-            else points[i] = QPointF(x_min+i, adc_draw_buff[x_min+i]);
-        } else {
-            points[i] = QPointF(x_min+i, adc_draw_buff[x_min+i]);
+    qint64 nowMs = QDateTime::currentMSecsSinceEpoch();
+    bool shouldRenderData = forceDataFrame || rflag || (nowMs - lastDataFrameMs >= 1000);
+    if (shouldRenderData) {
+        QVector<QPointF> points(range);
+        for (ulong i = 0; i < range; ++i) {
+            if (ui->check_log10->isChecked()) {
+                if (adc_draw_buff[x_min+i] == 0) points[i] = QPointF(x_min+i, 1);   //remove zeros from log10
+                else points[i] = QPointF(x_min+i, adc_draw_buff[x_min+i]);
+            } else {
+                points[i] = QPointF(x_min+i, adc_draw_buff[x_min+i]);
+            }
         }
+        series0->replace(points);
+        lastDataFrameMs = nowMs;
+        forceDataFrame = false;
     }
-    series0->replace(points);
 
     //MAX Value from data
     if (ui->check_auto_y->isChecked()) {
@@ -286,95 +346,87 @@ void MainWindow::redraw_chart(bool rflag)
         max_val = ui->y_max->value();
     }
 
-    auto series = new QAreaSeries(series0);
-    QPen pen(0x0B5394);     //blue
-    pen.setWidth(1);
-    series->setPen(pen);
-
-    QLinearGradient gradient(QPointF(0, 0), QPointF(0, 1));
-    gradient.setColorAt(0.0, 0x23649e);
-    gradient.setColorAt(1.0, 0x23649e);
-    gradient.setCoordinateMode(QGradient::LogicalMode);
-    series->setBrush(gradient);
-
-    QChart *chart = new QChart();
-    chart->legend()->hide();
-    chart->addSeries(series);
-
-    QFont title_font;
-    title_font.setBold(1);
-    title_font.setPixelSize(11);
-    title_font.setPointSize(11);
-
-    QFont label_font;
-    label_font.setBold(0);
-    label_font.setPixelSize(10);
-    label_font.setPointSize(10);
-
-    auto axisX = new QValueAxis;
-    axisX->setTitleText("ADC Channels");
-    axisX->setLabelFormat("%i");
-    axisX->setTitleFont(title_font);
-    axisX->setLabelsFont(label_font);
     axisX->setRange(x_min, x_max);
-    /*axisX->setTickType(QValueAxis::TicksFixed);
-    axisX->setTickCount((series0->count()/((x_max-x_min)/16))+1); //Used with static X ticks (default)*/
-    axisX->setTickType(QValueAxis::TicksDynamic);   //Set dynamic X ticks
-    axisX->setTickAnchor(0);                        //first X tick position
     uint tick_near = (range - 1) / 14;
     if (tick_near == 0) tick_near = 1;
-    uint size = sizeof(tick_values);
-    for (uint i = 0; i < size; i++) {
+    uint size = sizeof(tick_values) / sizeof(tick_values[0]);
+    for (uint i = 1; i < size; i++) {
         if (tick_near < tick_values[i]) {
             tick_near = tick_values[i-1];
             break;
         }
     }
     axisX->setTickInterval(tick_near);
-    chart->addAxis(axisX, Qt::AlignBottom);
-    series->attachAxis(axisX);
 
-    if (ui->check_log10->isChecked()) {
-        auto axisY = new QLogValueAxis;
-        axisY->setTitleText("Log10 Events");
-        axisY->setLabelFormat("%g");
-        axisY->setTitleFont(title_font);
-        axisX->setLabelsFont(label_font);
-        axisY->setRange(1, qreal(max_val));
-        axisY->setBase(10.0);
-        axisY->setMinorTickCount(-1);
-        chart->addAxis(axisY, Qt::AlignLeft);
-        series->attachAxis(axisY);
-    } else {
-        auto axisY = new QValueAxis;
-        axisY->setTitleText("Int Events");
-        axisY->setLabelFormat("%g");
-        axisY->setTitleFont(title_font);
-        axisX->setLabelsFont(label_font);
-        axisY->setTickCount(11);
-        axisY->setRange(0, qreal(max_val));
+    bool needLogAxis = ui->check_log10->isChecked();
+    if ((needLogAxis && dynamic_cast<QLogValueAxis*>(axisY) == nullptr) ||
+        (!needLogAxis && dynamic_cast<QValueAxis*>(axisY) == nullptr)) {
+        if (axisY) {
+            series->detachAxis(axisY);
+            chart->removeAxis(axisY);
+            delete axisY;
+            axisY = nullptr;
+        }
+
+        QFont title_font;
+        title_font.setBold(1);
+        title_font.setPixelSize(11);
+        title_font.setPointSize(11);
+
+        QFont label_font;
+        label_font.setBold(0);
+        label_font.setPixelSize(10);
+        label_font.setPointSize(10);
+
+        if (needLogAxis) {
+            auto *newAxisY = new QLogValueAxis;
+            newAxisY->setTitleText("Log10 Events");
+            newAxisY->setLabelFormat("%g");
+            newAxisY->setTitleFont(title_font);
+            newAxisY->setLabelsFont(label_font);
+            newAxisY->setBase(10.0);
+            newAxisY->setMinorTickCount(-1);
+            axisY = newAxisY;
+        } else {
+            auto *newAxisY = new QValueAxis;
+            newAxisY->setTitleText("Int Events");
+            newAxisY->setLabelFormat("%g");
+            newAxisY->setTitleFont(title_font);
+            newAxisY->setLabelsFont(label_font);
+            newAxisY->setTickCount(11);
+            axisY = newAxisY;
+        }
+
         chart->addAxis(axisY, Qt::AlignLeft);
         series->attachAxis(axisY);
     }
 
-    //Marker line
+    if (auto *logAxis = dynamic_cast<QLogValueAxis*>(axisY)) {
+        logAxis->setRange(1, qreal(max_val));
+    } else if (auto *linAxis = dynamic_cast<QValueAxis*>(axisY)) {
+        linAxis->setRange(0, qreal(max_val));
+    }
+
     if (ui->cb_mark->isChecked()) {
         auto mark_val = ui->sb_mark->value();
-        auto *marker0 = new QLineSeries();
-        *marker0 << QPointF(mark_val, 0) << QPointF(mark_val, 1);
-        QPen pen_m(0xF50202);   //red
-        pen_m.setWidth(1);
-        marker0->setPen(pen_m);
-        chart->addSeries(marker0);
+        marker0->replace({QPointF(mark_val, 0), QPointF(mark_val, qreal(max_val))});
+        if (marker0->chart() == nullptr) {
+            chart->addSeries(marker0);
+        }
         marker0->attachAxis(axisX);
+        if (axisY) marker0->attachAxis(axisY);
+    } else if (marker0->chart() != nullptr) {
+        chart->removeSeries(marker0);
     }
 
-
-    chart->setMargins(QMargins(0,0,5,0));   //left, top, right, and bottom
-    //chart->setBackgroundVisible(false);
-
-    ui->graphicsView->setRenderHint(QPainter::Antialiasing);
-    ui->graphicsView->setChart(chart);
+    auto sceneItems = ui->graphicsView->scene()->items();
+    for (QGraphicsItem *item : sceneItems) {
+        auto *textItem = dynamic_cast<QGraphicsTextItem*>(item);
+        if (textItem && textItem->toPlainText() == "WARNING!\nGRAPH\nOVERLOADED") {
+            ui->graphicsView->scene()->removeItem(textItem);
+            delete textItem;
+        }
+    }
 
     if (flag_overload) {
         QFont title_overload;
@@ -420,6 +472,7 @@ void MainWindow::on_x_min_editingFinished()
 {
     x_min = ui->x_min->value();
     ui->x_max->setMinimum(x_min+10);
+    forceDataFrame = true;
     emit call_redraw(0);
 }
 
@@ -428,6 +481,7 @@ void MainWindow::on_x_max_editingFinished()
 {
     x_max = ui->x_max->value();
     ui->x_min->setMaximum(x_max-10);
+    forceDataFrame = true;
     emit call_redraw(0);
 }
 
@@ -439,6 +493,7 @@ void MainWindow::on_check_auto_y_stateChanged()
     } else {
         ui->y_max->setEnabled(true);
     }
+    forceDataFrame = true;
     emit call_redraw(0);
 }
 
@@ -457,6 +512,7 @@ void MainWindow::on_sb_mark_editingFinished()
 
 void MainWindow::on_check_log10_stateChanged()
 {
+    forceDataFrame = true;
     emit call_redraw(0);
 }
 
