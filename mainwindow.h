@@ -11,6 +11,8 @@
 #include <QDebug>
 #include <QAreaSeries>
 #include <QLogValueAxis>
+#include <QAbstractAxis>
+#include <QGraphicsTextItem>
 
 #include "adc_control.h"
 #include "worker.h"
@@ -59,6 +61,12 @@ private:
     Ui::MainWindow *ui;
     worker *myWorker;
     QThread *WorkerThread;
+    QChart *chart;
+    QLineSeries *series0;
+    QAreaSeries *series;
+    QLineSeries *marker0;
+    QValueAxis *axisX;
+    QAbstractAxis *axisY;
 };
 
 #endif // MAINWINDOW_H
